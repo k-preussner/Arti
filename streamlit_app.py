@@ -1,56 +1,132 @@
 import streamlit as st
-from openai import OpenAI
+from streamlit_chat import message
 
-# Show title and description.
-st.title("💬 Chatbot")
-st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+# Set page config
+st.set_page_config(page_title="Artisan Partners - Mimic", layout="wide")
+
+# Custom CSS for styling
+st.markdown(
+    """
+    <style>
+        /* Top navigation bar */
+        .nav-bar {
+            background-color: #2E3B4E;
+            padding: 10px;
+            color: white;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+
+        .nav-bar a:hover {
+            text-decoration: underline;
+        }
+
+        /* Chatbot styling */
+        .chat-bot-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-bot-header {
+            background-color: #2E3B4E;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .chat-bot-body {
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .chat-bot-input {
+            border-top: 1px solid #ddd;
+            padding: 10px;
+        }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+# Top Navigation Bar
+st.markdown(
+    """
+    <div class="nav-bar">
+        <div>Artisan Partners</div>
+        <div>
+            <a href="#">Strategies</a>
+            <a href="#">Insights</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
+# Main Content Area
+st.title("Welcome to Artisan Partners")
+st.write(
+    "Discover our strategies, insights, and commitment to delivering exceptional outcomes for our clients."
+)
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+# Placeholder for chatbot
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+# Chatbot container
+with st.container():
+    st.markdown(
+        """
+        <div class="chat-bot-container">
+            <div class="chat-bot-header">Chat with Us</div>
+            <div class="chat-bot-body">
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
+    # Display chat messages
+    for message_data in st.session_state.messages:
+        if message_data["is_user"]:
+            message(message_data["content"], is_user=True, key=f"user-{message_data['key']}")
+        else:
+            message(message_data["content"], is_user=False, key=f"bot-{message_data['key']}")
 
-        # Store and display the current prompt.
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    st.markdown(
+        """
+            </div>
+            <div class="chat-bot-input">
+                <form action="javascript:void(0);">
+                    <input type="text" id="user_input" style="width: 100%; padding: 5px;" placeholder="Type your message here...">
+                </form>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+# Chatbot interaction logic
+user_input = st.text_input("Chatbot Input", "", key="chatbot")
+if user_input:
+    st.session_state.messages.append({"content": user_input, "is_user": True, "key": len(st.session_state.messages)})
+    # Example response
+    bot_response = "Thank you for your question! How can I assist you further?"
+    st.session_state.messages.append({"content": bot_response, "is_user": False, "key": len(st.session_state.messages)})
